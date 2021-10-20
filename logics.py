@@ -1,7 +1,8 @@
-from math import *
 GRID=[chr(i%8+97)+str(8-i//8) for i in range(64)]
 grid=['' for i in range(64)]
 grid[0]='wB'
+grid[4]='wK'
+grid[60]='bK'
 
 def transform_movement(mov:str)->tuple:
   posD=GRID.index(mov[:2])
@@ -16,7 +17,7 @@ def isPossibleKnight(posD:int,posA:int,eat:bool)->bool:
     return True
   return False
 
-def isPossibleTower(posD:int,posA:int,eat:bool)->bool:
+def isPossibleRook(posD:int,posA:int,eat:bool)->bool:
   if posD%8==posA%8 or posD//8==posA//8:
     return True
   return False
@@ -54,12 +55,12 @@ def isPossible(mov:str)->bool:
   piece,strColor=grid[posD][1],grid[posD][0]
   if piece=='N':
     return isPossibleKnight(posD,posA,eat)
-  elif piece=='T':
-    return isPossibleTower(posD,posA,eat)
+  elif piece=='R':
+    return isPossibleRook(posD,posA,eat)
   elif piece=='B':
     return isPossibleBishop(posD,posA,eat)
   elif piece=='Q':
-    return isPossibleTower(posD,posA,eat) or isPossibleBishop(posD,posA,eat)
+    return isPossibleRook(posD,posA,eat) or isPossibleBishop(posD,posA,eat)
   elif piece=='K':
     return isPossibleKing(posD,posA,eat)
   elif piece=='p':
@@ -70,7 +71,7 @@ def noInterference(mov:str)->bool:
   eat='x' in mov
   if abs(posA//8-posD//8)<=1 and abs(posA%8-posD%8)<=1:
     return True
-  if isPossibleTower(posD,posA,eat):
+  if isPossibleRook(posD,posA,eat):
     #Movement is of type tower movement
     if posA%8==posD%8:
       for i in range(1,abs(posA//8-posD//8)):
@@ -93,7 +94,7 @@ def noInterference(mov:str)->bool:
   else:
     return True
 
-def kingAlreadyInCheck(strColor:str)->bool:
+def kingAlreadyInCheck(strColor:str,grid:list=grid)->bool:
   opposite=[]
   if strColor=='w':
     for i in range(len(grid)):
@@ -110,18 +111,73 @@ def kingAlreadyInCheck(strColor:str)->bool:
   return False
 
 def protectsKing(mov:str)->bool:
-  pass
+  #Simulate situation when piece will have moved and see if king is still in check
+  tempGrid=[p for p in grid]#create a temporary grid
+  #Move the piece to its new place
+  posD,posA=transform_movement(mov)
+  strColor=grid[posD][0]
+  tempGrid[posA]=tempGrid[posD]
+  tempGrid[posD]=''
+  #Test if king in check and return contrary value
+  return kingAlreadyInCheck(strColor,tempGrid)
+  
+
+def putsKingInCheck(mov:str)->bool:
+  posD,posA=transform_movement(mov)
+  piece,strColor=grid[posD][1],grid[posD][0]
+  if strColor=='w':
+    oppColor='b'
+  else:
+    oppColor='w'
+  posK=grid.index(strColor+"K")
+  if piece=="K":
+    #check that the king does not check himself
+    opposite=[i for i in range(63) if grid[i][0]==oppColor]
+    putsInCkeck=[i for i in opposite if isPossible(i,posK,True) and noInterference(GRID[i]+' x'+GRID[posK])]
+    if len(putsInCkeck)!=0:
+      print(grid[putsInCkeck[0]],putsInCkeck)
+      return True
+    return False
+  elif posD//8==posK//8:
+    o=(posD%8>posK%8) - (posD%8<posK%8)
+    i=posD%8+o
+    while i<8 and i >-1:
+      if grid[posD//8*8+i]!='':
+        return isPossible(GRID[posD//8*8+i]+" x"+GRID[posK])
+      else:
+        i+=o
+    return False
+  elif posD%8==posK%8:
+    o=(posD//8>posK//8) - (posD//8<posK//8)
+    i=posD//8+o
+    while i<8 and i >-1:
+      if grid[posD//8+i*8]!='':
+        return isPossible(GRID[posD//8+i*8]+" x"+GRID[posK])
+      else:
+        i+=o
+    return False
+  elif abs(posD//8-posK//8)==abs(posD%8-posK%8):
+    oX=(posD%8>posK%8) - (posD%8<posK%8)
+    oY=(posD//8>posK//8) - (posD//8<posK//8)
+    i=posD+oX+oY*8
+    while i<64 and i>-1:
+      if grid[i]!='':
+        return isPossible(GRID[i]+' x'+GRID[posK])
+      else:
+        i+=oX+oY*8
+    return False
+    
 
 def kingCheckOK(mov:str)->bool:
   posD,posA=transform_movement(mov)
-  eat='x' in mov
-  piece,strColor=grid[posD][1],grid[posD][0]
+  strColor=grid[posD][0]
   if kingAlreadyInCheck(strColor):
     if protectsKing(mov):
       return True
   else:
     if not putsKingInCheck(mov):
       return True
+  return False
 
 def thereIsPieceAtStartingPoint(mov:str)->bool:
   posD,posA=transform_movement(mov)
@@ -129,8 +185,9 @@ def thereIsPieceAtStartingPoint(mov:str)->bool:
     return True
 
 def isLegal(mov:str)->bool:
-  if thereIsPieceAtStartingPoint(mov) and isPossible(mov) and kingCheckOK(mov):
+  if thereIsPieceAtStartingPoint(mov) and isPossible(mov) and kingCheckOK(mov) and noInterference(mov):
     return True
-print(isLegal('a8 h1'))
+  return False
+print(isLegal('a8 h1'))#True
 grid[45]='bp'
-print(isLegal('a8 h1'))
+print(isLegal('a8 h1'))#False
