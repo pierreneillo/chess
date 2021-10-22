@@ -1,8 +1,5 @@
 GRID=[chr(i%8+97)+str(8-i//8) for i in range(64)]
 grid=['' for i in range(64)]
-grid[0]='wB'
-grid[4]='wK'
-grid[60]='bK'
 
 def transform_movement(mov:str)->tuple:
   posD=GRID.index(mov[:2])
@@ -188,6 +185,58 @@ def isLegal(mov:str)->bool:
   if thereIsPieceAtStartingPoint(mov) and isPossible(mov) and kingCheckOK(mov) and noInterference(mov):
     return True
   return False
-print(isLegal('a8 h1'))#True
-grid[45]='bp'
-print(isLegal('a8 h1'))#False
+
+
+###TESTS#########################################################################################
+
+grid=[
+'','bK','bR','','bQ','bB','','bR',\
+'bp','bp','','','bp','bp','bp','bp',\
+'','','','','','bN','','',\
+'','','','bp','bQ','bB','','',\
+'','','','wp','','','','',\
+'wp','','wN','','','','','',\
+'','wp','wp','','','wp','wp','wp',\
+'wR','','wB','wK','wQ','wB','','wR']
+
+def test_transform_movement():
+  assert transform_movement("a8 b7")==(0,9)
+
+def test_isPossible():
+  #Pawns:
+  assert isPossible("b2 b3")
+  assert isPossible("b2 b4")
+  assert isPossible("d4 xe5")
+  assert isPossible("b2 b1")==False
+
+  #Knights:
+  assert isPossible("c3 e2")
+  assert isPossible("c3 e4")
+  assert isPossible("c3 xb5")
+  assert isPossible("f6 xg4")
+  assert isPossible("f6 g3")==False
+
+  #Bishops:
+  assert isPossible("f5 e4")
+  assert isPossible("f5 h3")
+  assert isPossible("f5 xh2")==False
+  assert isPossible("f1 g2")
+  assert isPossible("f1 g5")==False
+
+  #Rooks:
+  assert isPossible("h1 xa1")
+  assert isPossible("a1 a8")
+  assert isPossible("a1 h8")==False
+  assert isPossible("a1 b2")==False
+
+  #Queens:
+  #No need because queen is bishop or rook
+
+  #Kings:
+  assert isPossible("d1 d2")
+  assert isPossible("d1 e2")
+  assert isPossible("d1 d3")==False
+  assert isPossible("d1 c1")
+  assert isPossible("d1 b1")==False
+
+test_isPossible()
