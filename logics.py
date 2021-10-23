@@ -66,6 +66,9 @@ def isPossible(mov:str)->bool:
 def noInterference(mov:str)->bool:
   posD,posA=transform_movement(mov)
   eat='x' in mov
+  strColor=grid[posD][0]
+  if len(grid[posA])>0 and strColor == grid[posA][0]:
+    return False
   if abs(posA//8-posD//8)<=1 and abs(posA%8-posD%8)<=1:
     return True
   if isPossibleRook(posD,posA,eat):
@@ -91,18 +94,23 @@ def noInterference(mov:str)->bool:
   else:
     return True
 
-def kingAlreadyInCheck(strColor:str,grid:list=grid)->bool:
+def kingAlreadyInCheck(strColor:str,grid:list)->bool:
   opposite=[]
+  allies=[]
   if strColor=='w':
     for i in range(len(grid)):
       if 'b' in grid[i]:
         opposite.append(i)
+      elif 'w' in grid[i]:
+        allies.append(i)
   else:
     for i in range(len(grid)):
       if 'w' in grid[i]:
         opposite.append(i)
+      elif 'b' in grid[i]:
+        allies.append(i)
   for pos in opposite:
-    mov=GRID[pos]+' '+GRID[grid.index(strColor+'K')]
+    mov=GRID[pos]+' x'+GRID[grid.index(strColor+'K')]
     if isPossible(mov) and noInterference(mov):
       return True
   return False
@@ -116,7 +124,7 @@ def protectsKing(mov:str)->bool:
   tempGrid[posA]=tempGrid[posD]
   tempGrid[posD]=''
   #Test if king in check and return contrary value
-  return kingAlreadyInCheck(strColor,tempGrid)
+  return not kingAlreadyInCheck(strColor,tempGrid)
   
 
 def putsKingInCheck(mov:str)->bool:
@@ -129,10 +137,9 @@ def putsKingInCheck(mov:str)->bool:
   posK=grid.index(strColor+"K")
   if piece=="K":
     #check that the king does not check himself
-    opposite=[i for i in range(63) if grid[i][0]==oppColor]
-    putsInCkeck=[i for i in opposite if isPossible(i,posK,True) and noInterference(GRID[i]+' x'+GRID[posK])]
+    opposite=[i for i in range(63) if len(grid[i])!=0 and grid[i][0]==oppColor]
+    putsInCkeck=[i for i in opposite if isPossible(GRID[i]+' x'+GRID[posA]) and noInterference(GRID[i]+' x'+GRID[posA])]
     if len(putsInCkeck)!=0:
-      print(grid[putsInCkeck[0]],putsInCkeck)
       return True
     return False
   elif posD//8==posK//8:
@@ -148,8 +155,8 @@ def putsKingInCheck(mov:str)->bool:
     o=(posD//8>posK//8) - (posD//8<posK//8)
     i=posD//8+o
     while i<8 and i >-1:
-      if grid[posD//8+i*8]!='':
-        return isPossible(GRID[posD//8+i*8]+" x"+GRID[posK])
+      if grid[posD%8+i*8]!='':
+        return isPossible(GRID[posD%8+i*8]+" x"+GRID[posK])
       else:
         i+=o
     return False
@@ -163,12 +170,13 @@ def putsKingInCheck(mov:str)->bool:
       else:
         i+=oX+oY*8
     return False
+  return False
     
 
 def kingCheckOK(mov:str)->bool:
   posD,posA=transform_movement(mov)
   strColor=grid[posD][0]
-  if kingAlreadyInCheck(strColor):
+  if kingAlreadyInCheck(strColor,grid):
     if protectsKing(mov):
       return True
   else:
@@ -186,22 +194,27 @@ def isLegal(mov:str)->bool:
     return True
   return False
 
+#DEBUG###########################################################################################
+def printGrid(grid):
+  for i in range(64):
+    print(grid[i],end=" "*(3-len(grid[i])))
+    if i%8==7:
+      print()
+  print()
 
 ###TESTS#########################################################################################
 
 grid=[
 '','bK','bR','','bQ','bB','','bR',\
-'bp','bp','','','bp','bp','bp','bp',\
+'wp','bp','','','bp','bp','bp','bp',\
 '','','','','','bN','','',\
-'','','','bp','bQ','bB','','',\
+'','','','bR','bQ','bB','','',\
 '','','','wp','','','','',\
-'wp','','wN','','','','','',\
+'bp','','wN','','','','','',\
 '','wp','wp','','','wp','wp','wp',\
 'wR','','wB','wK','wQ','wB','','wR']
-
 def test_transform_movement():
   assert transform_movement("a8 b7")==(0,9)
-
 def test_isPossible():
   #Pawns:
   assert isPossible("b2 b3")
@@ -232,11 +245,36 @@ def test_isPossible():
   #Queens:
   #No need because queen is bishop or rook
 
-  #Kings:
+  #King:
   assert isPossible("d1 d2")
   assert isPossible("d1 e2")
   assert isPossible("d1 d3")==False
   assert isPossible("d1 c1")
   assert isPossible("d1 b1")==False
-
-test_isPossible()
+def test_noInterference():
+  assert noInterference("b8 h2")==False
+  assert noInterference("b8 e5")==False
+  assert noInterference("b8 d6")
+  assert noInterference("a7 a3")
+  assert noInterference("a7 a2")==False
+def test_kingAlreadyInCheck():
+  assert  kingAlreadyInCheck("w",grid)==False
+  assert kingAlreadyInCheck("b",grid)
+def test_protectsKing():
+  assert protectsKing("b8 xa7")
+  assert protectsKing("b8 a8")
+  assert protectsKing("c8 c7")==False
+def test_putsKingInCheck():
+  global grid
+  assert putsKingInCheck("f2 f4")==False
+  assert putsKingInCheck("d4 xe5")
+  assert putsKingInCheck("d1 e2")
+#No need to test KingCheckOK, it is a simple enough combiation of putsKingInCheck, kingAlreadyInCheck and protectsKing
+#No need either to test thereIsAPieceAtStartingPoint, simple function
+def test_isLegal():
+  assert isLegal("a3 a2")==False
+  assert isLegal("a3 xb2")==False
+  assert isLegal("a1 xa3")
+  assert isLegal("b8 xa7")
+  assert isLegal("g2 g3")
+  assert isLegal("h1 g1")
